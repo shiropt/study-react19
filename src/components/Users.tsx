@@ -1,14 +1,10 @@
 import { Box, LoadingOverlay, TextInput } from "@mantine/core";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { UserTable } from "./UserTable";
-
-type User = {
-  id: string;
-  name: string;
-};
+import { User } from "../mocks/db";
 
 export const Users = () => {
-  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, startTransition] = useTransition();
 
   const fetchData = async () => {
