@@ -3,6 +3,10 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 
+import "@mantine/core/styles.css";
+
+import { MantineProvider } from "@mantine/core";
+
 async function enableMocking() {
   if (!import.meta.env.DEV) {
     return;
@@ -14,7 +18,9 @@ async function enableMocking() {
 enableMocking().then(() => {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <App />
+      <MantineProvider>
+        <App />
+      </MantineProvider>
     </StrictMode>
   );
 });
