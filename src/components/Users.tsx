@@ -30,6 +30,17 @@ export const Users = () => {
 
   const [, action, isSubmitting] = useActionState(postUser, users);
 
+  const handleLikeButtonClick = async (id: string) => {
+    const user = users.find((user) => user.id === id);
+    if (!user) return;
+    const response = await fetch(`/user/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...user, like: user.like + 1 }),
+    });
+    const data = await response.json();
+    setUsers(data.data);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -46,7 +57,11 @@ export const Users = () => {
             placeholder="please input user name"
           />
         </form>
-        <UserTable isLoading={isLoading} users={users} />
+        <UserTable
+          handleLikeButtonClick={handleLikeButtonClick}
+          isLoading={isLoading}
+          users={users}
+        />
       </Box>
     </Box>
   );
