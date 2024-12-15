@@ -1,5 +1,12 @@
-import { Box, Flex, Skeleton, Table, Title } from "@mantine/core";
-import { useEffect, useState } from "react";
+import {
+  Box,
+  Flex,
+  LoadingOverlay,
+  Skeleton,
+  Table,
+  Title,
+} from "@mantine/core";
+import { useEffect, useState, useTransition } from "react";
 
 function App() {
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
@@ -20,6 +27,7 @@ function App() {
   }, []);
   return (
     <Box p="md">
+      <LoadingOverlay visible={isPending} zIndex={1000} />
       <Flex direction="column">
         <Title p="md" order={1}>
           Hello React v19
