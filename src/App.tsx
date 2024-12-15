@@ -7,15 +7,19 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+
+type User = {
+  id: string;
+  name: string;
+};
 
 function App() {
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setLoading] = useTransition();
-  const [isSubmitting, setIsSubmitting] = useTransition();
+  const [isLoading, startTransition] = useTransition();
 
   const fetchData = async () => {
-    setLoading(async () => {
+    startTransition(async () => {
       const response = await fetch("/users", {
         method: "GET",
       });
@@ -24,20 +28,18 @@ function App() {
     });
   };
 
-  const handleSubmit = async (v: React.FormEvent<HTMLFormElement>) => {
-    v.preventDefault();
-    const formData = new FormData(v.target as HTMLFormElement);
+  const postUser = async (prevState: User[], formData: FormData) => {
     const name = formData.get("name");
-
-    setIsSubmitting(async () => {
-      const response = await fetch("/user", {
-        method: "POST",
-        body: JSON.stringify({ name }),
-      });
-      const data = await response.json();
-      setUsers((prev) => [...prev, data.data]);
+    const response = await fetch("/user", {
+      method: "POST",
+      body: JSON.stringify({ name }),
     });
+    const data = await response.json();
+    setUsers((prev) => [...prev, data.data]);
+    return [...prevState, data.data];
   };
+
+  const [, action, isSubmitting] = useActionState(postUser, users);
 
   useEffect(() => {
     fetchData();
@@ -50,7 +52,7 @@ function App() {
           Hello React v19
         </Title>
         <Box p="md">
-          <form onSubmit={handleSubmit}>
+          <form action={action}>
             <TextInput
               w="20em"
               required
