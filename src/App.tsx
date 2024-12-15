@@ -1,97 +1,14 @@
-import {
-  Box,
-  Flex,
-  LoadingOverlay,
-  Skeleton,
-  Table,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { useActionState, useEffect, useState, useTransition } from "react";
-
-type User = {
-  id: string;
-  name: string;
-};
+import { Box, Flex, Title } from "@mantine/core";
+import { Users } from "./components/Users";
 
 function App() {
-  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, startTransition] = useTransition();
-
-  const fetchData = async () => {
-    startTransition(async () => {
-      const response = await fetch("/users", {
-        method: "GET",
-      });
-      const data = await response.json();
-      setUsers(data.data);
-    });
-  };
-
-  const postUser = async (prevState: User[], formData: FormData) => {
-    const name = formData.get("name");
-    const response = await fetch("/user", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    const data = await response.json();
-    setUsers((prev) => [...prev, data.data]);
-    return [...prevState, data.data];
-  };
-
-  const [, action, isSubmitting] = useActionState(postUser, users);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
   return (
     <Box p="md">
-      <LoadingOverlay visible={isLoading || isSubmitting} zIndex={1000} />
       <Flex direction="column">
         <Title p="md" order={1}>
           Hello React v19
         </Title>
-        <Box p="md">
-          <form action={action}>
-            <TextInput
-              w="20em"
-              required
-              name="name"
-              label="user name"
-              placeholder="please input user name"
-            />
-          </form>
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>id</Table.Th>
-                <Table.Th>name</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {isLoading ? (
-                <>
-                  {Array.from({ length: 10 }).map((_, index) => {
-                    return (
-                      <Table.Tr key={index}>
-                        <Table.Td colSpan={2}>
-                          <Skeleton height={24} />
-                        </Table.Td>
-                      </Table.Tr>
-                    );
-                  })}
-                </>
-              ) : (
-                users.map((user) => (
-                  <Table.Tr key={user.id}>
-                    <Table.Td>{user.id}</Table.Td>
-                    <Table.Td>{user.name}</Table.Td>
-                  </Table.Tr>
-                ))
-              )}
-            </Table.Tbody>
-          </Table>
-        </Box>
+        <Users />
       </Flex>
     </Box>
   );
