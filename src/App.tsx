@@ -3,16 +3,16 @@ import { useEffect, useState } from "react";
 
 function App() {
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const fetchData = async () => {
-    setIsLoading(true);
-    const response = await fetch("/users", {
-      method: "GET",
+    startTransition(async () => {
+      const response = await fetch("/users", {
+        method: "GET",
+      });
+      const data = await response.json();
+      setUsers(data.data);
     });
-    const data = await response.json();
-    setUsers(data.data);
-    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -33,7 +33,7 @@ function App() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {isLoading && (
+              {isPending && (
                 <>
                   {Array.from({ length: 10 }).map((_, index) => {
                     return (
