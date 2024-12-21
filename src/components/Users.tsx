@@ -1,100 +1,60 @@
-import { Box, Button, LoadingOverlay, TextInput } from "@mantine/core";
-import {
-  useActionState,
-  useEffect,
-  useOptimistic,
-  useTransition,
-  startTransition,
-} from "react";
-import { UserTable } from "./UserTable";
+import { Box, LoadingOverlay, Skeleton, Table, TextInput } from "@mantine/core";
+import { Suspense, useState, useTransition } from "react";
+import { TableContainer, UserTable } from "./UserTable";
 import { User } from "../mocks/db";
 
+const fetchData = async () => {
+  const response = await fetch("/users", {
+    method: "GET",
+  });
+  return await response.json();
+};
+
+const postData = async (formData: FormData) => {
+  const name = formData.get("name");
+  const response = await fetch("/user", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  return await response.json();
+};
+
+const Fallback = () => {
+  return (
+    <>
+      <LoadingOverlay visible zIndex={1000} />
+      <TableContainer>
+        {Array.from({ length: 10 }).map((_, index) => {
+          return (
+            <Table.Tr key={index}>
+              <Table.Td colSpan={3}>
+                <Skeleton height={24} />
+              </Table.Td>
+            </Table.Tr>
+          );
+        })}
+      </TableContainer>
+    </>
+  );
+};
+
 export const Users = () => {
+  const [isPending, startTransition] = useTransition();
+  const [usersPromise, setUsersPromise] = useState<Promise<{ data: User[] }>>(
+    fetchData()
+  );
+
   const postUser = async (formData: FormData) => {
-    const name = formData.get("name");
-    const response = await fetch("/user", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    return await response.json();
-  };
-
-  const [users, setUsers, isSubmitting] = useActionState<
-    User[],
-    User[] | FormData
-  >(async (prev, next) => {
-    if (next instanceof FormData) {
-      const response = await postUser(next);
-      return [...prev, response.data];
-    }
-    return next;
-  }, []);
-  const [displayUsers, setDisplayUsers] = useOptimistic<User[], User[]>(
-    users,
-    (_, next) => next
-  );
-
-  const [isLoading, startLoading] = useTransition();
-
-  const fetchData = async () => {
-    startLoading(async () => {
-      const response = await fetch("/users", {
-        method: "GET",
-      });
-      const data = await response.json();
-      startTransition(() => setUsers(data.data));
+    startTransition(() => {
+      setUsersPromise(postData(formData));
     });
   };
 
-  const handleLikeButtonClick = async (id: string) => {
-    const user = users.find((user) => user.id === id);
-    if (!user) return;
-
-    startTransition(async () => {
-      const optimisticValue = displayUsers.map((u) =>
-        u.id === id ? { ...u, like: u.like + 1 } : u
-      );
-      setDisplayUsers(optimisticValue);
-
-      const response = await fetch(`/user/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({ ...user, like: user.like + 1 }),
-      });
-      const data = await response.json();
-      setUsers(data.data);
-    });
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const [count, increment, isPending] = useActionState((currentCount) => {
-    startTransition(async () => {
-      setOptimisticValue(optimisticValue + 1);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    });
-    return currentCount + 1;
-  }, 0);
-
-  const [optimisticValue, setOptimisticValue] = useOptimistic<number, number>(
-    count,
-    (_, next) => next
-  );
   return (
     <Box p="md">
-      <LoadingOverlay visible={isLoading || isSubmitting} zIndex={1000} />
+      <LoadingOverlay visible={isPending} zIndex={1000} />
       <Box>
-        <Button
-          disabled={isPending}
-          variant="transparent"
-          p={4}
-          size="xs"
-          onClick={increment}
-        >
-          ❤️ {optimisticValue}
-        </Button>
-        <form action={setUsers}>
+        <form action={postUser}>
           <TextInput
             w="20em"
             required
@@ -103,11 +63,9 @@ export const Users = () => {
             placeholder="please input user name"
           />
         </form>
-        <UserTable
-          handleLikeButtonClick={handleLikeButtonClick}
-          isLoading={isLoading}
-          users={displayUsers}
-        />
+        <Suspense fallback={<Fallback />}>
+          <UserTable usersPromise={usersPromise} />
+        </Suspense>
       </Box>
     </Box>
   );
