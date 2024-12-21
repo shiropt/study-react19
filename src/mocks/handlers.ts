@@ -25,13 +25,13 @@ export const handlers = [
     async ({ request }) => {
       await delay(1000);
       const data = await request.json();
-      const user = db.user.create({
+      db.user.create({
         id: String(db.user.getAll().length + 1),
         name: data.name,
         like: 0,
       });
       return HttpResponse.json({
-        data: user,
+        data: db.user.getAll(),
       });
     }
   ),
