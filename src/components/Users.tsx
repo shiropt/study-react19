@@ -3,7 +3,6 @@ import {
   useActionState,
   useEffect,
   useOptimistic,
-  useState,
   useTransition,
   startTransition,
 } from "react";
@@ -11,7 +10,25 @@ import { UserTable } from "./UserTable";
 import { User } from "../mocks/db";
 
 export const Users = () => {
-  const [users, setUsers] = useState<User[]>([]);
+  const postUser = async (formData: FormData) => {
+    const name = formData.get("name");
+    const response = await fetch("/user", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    return await response.json();
+  };
+
+  const [users, setUsers, isSubmitting] = useActionState<
+    User[],
+    User[] | FormData
+  >(async (prev, next) => {
+    if (next instanceof FormData) {
+      const response = await postUser(next);
+      return [...prev, response.data];
+    }
+    return next;
+  }, []);
   const [displayUsers, setDisplayUsers] = useOptimistic<User[], User[]>(
     users,
     (_, next) => next
@@ -25,22 +42,9 @@ export const Users = () => {
         method: "GET",
       });
       const data = await response.json();
-      setUsers(data.data);
+      startTransition(() => setUsers(data.data));
     });
   };
-
-  const postUser = async (prevState: User[], formData: FormData) => {
-    const name = formData.get("name");
-    const response = await fetch("/user", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    const data = await response.json();
-    setUsers((prev) => [...prev, data.data]);
-    return [...prevState, data.data];
-  };
-
-  const [, action, isSubmitting] = useActionState(postUser, users);
 
   const handleLikeButtonClick = async (id: string) => {
     const user = users.find((user) => user.id === id);
@@ -90,7 +94,7 @@ export const Users = () => {
         >
           ❤️ {optimisticValue}
         </Button>
-        <form action={action}>
+        <form action={setUsers}>
           <TextInput
             w="20em"
             required
