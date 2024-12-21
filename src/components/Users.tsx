@@ -1,14 +1,26 @@
-import { Box, LoadingOverlay, TextInput } from "@mantine/core";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { Box, Button, LoadingOverlay, TextInput } from "@mantine/core";
+import {
+  useActionState,
+  useEffect,
+  useOptimistic,
+  useState,
+  useTransition,
+  startTransition,
+} from "react";
 import { UserTable } from "./UserTable";
 import { User } from "../mocks/db";
 
 export const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, startTransition] = useTransition();
+  const [displayUsers, setDisplayUsers] = useOptimistic<User[], User[]>(
+    users,
+    (_, next) => next
+  );
+
+  const [isLoading, startLoading] = useTransition();
 
   const fetchData = async () => {
-    startTransition(async () => {
+    startLoading(async () => {
       const response = await fetch("/users", {
         method: "GET",
       });
@@ -33,21 +45,51 @@ export const Users = () => {
   const handleLikeButtonClick = async (id: string) => {
     const user = users.find((user) => user.id === id);
     if (!user) return;
-    const response = await fetch(`/user/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ ...user, like: user.like + 1 }),
+
+    startTransition(async () => {
+      const optimisticValue = displayUsers.map((u) =>
+        u.id === id ? { ...u, like: u.like + 1 } : u
+      );
+      setDisplayUsers(optimisticValue);
+
+      const response = await fetch(`/user/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ ...user, like: user.like + 1 }),
+      });
+      const data = await response.json();
+      setUsers(data.data);
     });
-    const data = await response.json();
-    setUsers(data.data);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const [count, increment, isPending] = useActionState((currentCount) => {
+    startTransition(async () => {
+      setOptimisticValue(optimisticValue + 1);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    });
+    return currentCount + 1;
+  }, 0);
+
+  const [optimisticValue, setOptimisticValue] = useOptimistic<number, number>(
+    count,
+    (_, next) => next
+  );
   return (
     <Box p="md">
       <LoadingOverlay visible={isLoading || isSubmitting} zIndex={1000} />
       <Box>
+        <Button
+          disabled={isPending}
+          variant="transparent"
+          p={4}
+          size="xs"
+          onClick={increment}
+        >
+          ❤️ {optimisticValue}
+        </Button>
         <form action={action}>
           <TextInput
             w="20em"
@@ -60,7 +102,7 @@ export const Users = () => {
         <UserTable
           handleLikeButtonClick={handleLikeButtonClick}
           isLoading={isLoading}
-          users={users}
+          users={displayUsers}
         />
       </Box>
     </Box>
